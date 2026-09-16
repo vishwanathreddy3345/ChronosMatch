@@ -91,7 +91,7 @@ class AsyncMarketSimulator:
         """Generate a single :class:`Order` instance using the configured RNG."""
         # Determine side first for deterministic tests
         side = Side.BUY if self._side_rng.random() < self._buy_ratio else Side.SELL
-        symbol = self._rng.choice(self._symbols)
+        # symbol selection removed (unused)
         price = self._rng.uniform(*self._price_range)
         quantity = self._rng.randint(*self._quantity_range)
         # Use a simple integer timestamp (seconds since epoch)

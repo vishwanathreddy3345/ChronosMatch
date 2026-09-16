@@ -11,10 +11,11 @@ from ..models.order import Order
 class Week1Pipeline:
     """Integrates the async market simulator with the mmap ring buffer and a consumer.
 
-    The pipeline runs the simulator to generate ``Order`` objects, pushes them into a
+    The pipeline runs the simulator to generate ``Order`` objects, pushing them into a
     :class:`~chronosmatch.ipc.ring_buffer.RingBuffer`, and concurrently consumes the
-    serialized records, deserialising them back into :class:`~chronosmatch.models.order.Order`
-    instances.
+    serialized records, deserialising them back into
+    :class:`~chronosmatch.models.order.Order` instances.
+
 
     The integration is deliberately lightweight – the consumer is a simple ``async``
     coroutine that repeatedly calls :meth:`RingBuffer.pop`.  ``RingBuffer.pop`` is a
@@ -101,7 +102,8 @@ def measure_throughput(
 ) -> dict:
     """Run the Week1Pipeline and measure throughput.
 
-    Returns a dictionary with ``order_count``, ``elapsed``, ``orders_per_sec``, ``python_version`` and ``platform``.
+    Returns a dictionary with ``order_count``, ``elapsed``, ``orders_per_sec``,
+    ``python_version`` and ``platform``.
     """
     import platform
     import sys
