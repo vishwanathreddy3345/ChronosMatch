@@ -1,11 +1,16 @@
+from __future__ import annotations
+
 import asyncio
 import time
 from pathlib import Path
-from typing import List, Optional
+from typing import TYPE_CHECKING, List, Optional
 
 from ..simulator.async_market import AsyncMarketSimulator
 from ..ipc.ring_buffer import RingBuffer
 from ..models.order import Order
+
+if TYPE_CHECKING:
+    from ..engine.matching import MatchingEngine
 
 
 class Week1Pipeline:
@@ -27,17 +32,26 @@ class Week1Pipeline:
     and the consumer so they operate on the same mmap file.
     """
 
-    def __init__(self, *, buffer_path: Path, buffer_capacity: int = 4, **sim_kwargs):
+    def __init__(
+        self,
+        *,
+        buffer_path: Path,
+        buffer_capacity: int = 4,
+        matching_engine: Optional[MatchingEngine] = None,
+        **sim_kwargs,
+    ):
         """Create a new pipeline.
 
         Args:
             buffer_path: Path to the mmap file used for the ring buffer.
             buffer_capacity: Capacity of the ring buffer (number of orders).
+            matching_engine: Optional :class:`MatchingEngine` to ingest orders.
             **sim_kwargs: Keyword arguments passed directly to
                 :class:`AsyncMarketSimulator` (e.g., ``count``, ``rate``, ``seed``).
         """
         self._buffer_path = buffer_path
         self._buffer_capacity = buffer_capacity
+        self._matching_engine = matching_engine
         # Initialise simulator with the same buffer parameters.
         self._sim = AsyncMarketSimulator(
             buffer_path=buffer_path,
@@ -58,6 +72,8 @@ class Week1Pipeline:
             order = self._ring.pop()
             if order is not None:
                 orders.append(order)
+                if self._matching_engine is not None:
+                    self._matching_engine.process_order(order)
                 continue
             # Empty – give producer a chance to fill the buffer.
             await asyncio.sleep(0.001)
@@ -91,6 +107,11 @@ class Week1Pipeline:
         """Explicitly close underlying resources (useful if the pipeline is aborted)."""
         self._sim.close()
         self._ring.close()
+
+    @property
+    def matching_engine(self) -> Optional[MatchingEngine]:
+        """Optional matching engine receiving consumed orders."""
+        return self._matching_engine
 
 
 def measure_throughput(
