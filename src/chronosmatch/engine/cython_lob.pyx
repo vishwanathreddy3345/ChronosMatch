@@ -50,6 +50,8 @@ cdef class CythonLimitOrderBook:
         """Add an ``Order`` instance to the book, preserving price‑time priority.
         Typed locals avoid repeated attribute look‑ups.
         """
+        if not isinstance(order, Order):
+            raise TypeError("order must be an Order instance")
         cdef object side = order.side
         cdef double price = order.price
         cdef dict book
@@ -57,9 +59,11 @@ cdef class CythonLimitOrderBook:
         if side is Side.BUY:
             book = self._bids
             pt_list = self._bid_prices
-        else:
+        elif side is Side.SELL:
             book = self._asks
             pt_list = self._ask_prices
+        else:
+            raise ValueError(f"Unsupported side: {side}")
         if price not in book:
             book[price] = []
             bisect.insort_left(pt_list, price)
@@ -106,7 +110,7 @@ cdef class CythonLimitOrderBook:
                 result[price] = tuple(orders)
             return result
 
-    cpdef void remove_order(self, int order_id):
+    cpdef void remove_order(self, object order_id):
         """Remove an order by its identifier from both sides if present."""
         cdef list orders
         cdef double price

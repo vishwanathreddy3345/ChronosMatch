@@ -12,10 +12,15 @@ from __future__ import annotations
 
 import asyncio
 from pathlib import Path
-from typing import TYPE_CHECKING, List, Mapping, Optional, Tuple
+from typing import TYPE_CHECKING, Any, List, Mapping, Optional, Tuple, Union
 
 from ..models.order import Order, Side
 from .order_book import LimitOrderBook
+
+try:
+    from .cython_lob import CythonLimitOrderBook  # type: ignore[import-not-found]
+except ImportError:  # pragma: no cover
+    CythonLimitOrderBook = None  # type: ignore[assignment, misc]
 
 if TYPE_CHECKING:
     from ..ipc.ring_buffer import RingBuffer
@@ -25,12 +30,34 @@ class MatchingEngine:
     """Consumes orders from market-data flows and maintains limit order book state.
 
     Attributes:
-        book: The underlying :class:`LimitOrderBook` managing order queues.
+        book: The underlying order book managing order queues.
     """
 
-    def __init__(self, book: Optional[LimitOrderBook] = None) -> None:
-        """Initialise the matching engine with an optional pre-existing book."""
-        self.book: LimitOrderBook = book if book is not None else LimitOrderBook()
+    def __init__(
+        self,
+        book: Optional[Union[LimitOrderBook, Any]] = None,
+        *,
+        use_cython: bool = False,
+    ) -> None:
+        """Initialise the matching engine.
+
+        Args:
+            book: Optional pre-existing order book instance (pure-Python
+                :class:`LimitOrderBook` or :class:`CythonLimitOrderBook`).
+            use_cython: If True, initialise with a new :class:`CythonLimitOrderBook`.
+                Cannot be combined with an explicit *book*. Raises
+                :class:`RuntimeError` if the Cython extension is unavailable.
+        """
+        if book is not None:
+            if use_cython:
+                raise ValueError("Cannot specify both book and use_cython=True")
+            self.book = book
+        elif use_cython:
+            if CythonLimitOrderBook is None:
+                raise RuntimeError("CythonLimitOrderBook extension is not available")
+            self.book = CythonLimitOrderBook()
+        else:
+            self.book = LimitOrderBook()
         self._processed_count: int = 0
 
     @property

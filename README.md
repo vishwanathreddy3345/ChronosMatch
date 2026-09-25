@@ -81,6 +81,14 @@ python -m benchmarks.benchmark_python
 python -m benchmarks.benchmark_cython
 ```
 
+## Matching Engine & Cython Integration
+
+The `MatchingEngine` defaults to the pure-Python `LimitOrderBook`. For accelerated execution, the compiled `CythonLimitOrderBook` can be used interchangeably:
+- By dependency injection: `MatchingEngine(book=CythonLimitOrderBook())`
+- Via flag: `MatchingEngine(use_cython=True)`
+
+Full behavioral parity (price-time priority, FIFO queueing, depth snapshots, order cancellation, and input validation) is verified across both implementations.
+
 ## License
 
 MIT License – see `LICENSE` file.
